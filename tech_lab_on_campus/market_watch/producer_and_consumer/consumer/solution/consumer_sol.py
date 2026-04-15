@@ -19,9 +19,9 @@ class mqConsumer(mqConsumerInterface):
         conParams = pika.URLParameters(os.environ['AMQP_URL'])
         self.connection = pika.BlockingConnection(parameters=conParams)
 
-        self.channel = connection.channel()
+        self.channel = self.connection.channel()
 
-        self.channel.queue_declare(queue='Test')
+        self.channel.queue_declare(queue=self.queue_name)
 
         self.channel.exchange_declare(exchange=self.exchange_name)
         self.channel.queue_bind(queue=self.queue_name, exchange=self.exchange_name, routing_key=self.binding_key)
@@ -32,13 +32,14 @@ class mqConsumer(mqConsumerInterface):
 
         self.channel.basic_ack(method_frame.delivery_tag, False)
         print(body)
-        self.connection.close()
     
     def startConsuming(self) -> None:
         print(" [*] Waiting for messages. To exit press CTRL+C")
         self.channel.basic_consume(
-            self.queue_name, startConsuming, auto_ack=False
+            self.queue_name, self.on_message_callback, auto_ack=False
         )
+
+        self.channel.start_consuming()
 
     def __del__(self) -> None:
         print("Closing RMQ connection on destruction")
